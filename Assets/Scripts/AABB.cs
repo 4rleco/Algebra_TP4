@@ -24,6 +24,25 @@ public class AABB : MonoBehaviour
         localExtents = localBounds.extents;
     }
 
+    private void Update()
+    {
+        isVisible = IsAnyVertexVisible();
+
+        if(!isVisible)
+            meshRenderer.enabled = false;
+        else
+            meshRenderer.enabled = true;
+
+        if (isVisible)
+        {
+            Debug.Log($"[DENTRO] {gameObject.name} está en el rango de visión.");
+        }
+        else
+        {
+            Debug.Log($"[FUERA] {gameObject.name} está fuera de visión.");
+        }
+    }
+
     void OnDrawGizmos()
     {
         if (GetComponentInChildren<MeshFilter>() == null) return;
@@ -37,7 +56,7 @@ public class AABB : MonoBehaviour
             localExtents = localBounds.extents;
         }
 
-        // Matriz de transformaciï¿½n actual
+        // Matriz de transformación actual
         Matrix4x4 localToWorld = transform.localToWorldMatrix;
 
         // Centro en mundo
@@ -71,4 +90,25 @@ public class AABB : MonoBehaviour
         Gizmos.DrawWireCube(worldBounds.center, worldBounds.size);
     }
 
+    private bool IsPointInsideFrustum(Vector3 worldPoint)
+    {
+        return (frustrum.GetNear().GetSide(worldPoint) && frustrum.GetFar().GetSide(worldPoint) && frustrum.GetLeft().GetSide(worldPoint) &&
+            frustrum.GetRight().GetSide(worldPoint) && frustrum.GetTop().GetSide(worldPoint) && frustrum.GetBottom().GetSide(worldPoint));
+    }
+
+    private bool IsAnyVertexVisible()
+    {
+        Vector3[] vertices = mesh.vertices;
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Vector3 worldVertex = transform.TransformPoint(vertices[i]);
+            if (IsPointInsideFrustum(worldVertex))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
