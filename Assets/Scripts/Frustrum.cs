@@ -1,10 +1,11 @@
+using System.Linq.Expressions;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 public class Frustrum : MonoBehaviour
 {
     [SerializeField] private float fov = 60f;
-    [SerializeField] private float aspectRatio = 16f / 9f; 
+    [SerializeField] private float aspectRatio = 16f / 9f;
     [SerializeField] private MeshFilter targetObject;
     [SerializeField] private Camera camera;
 
@@ -18,10 +19,15 @@ public class Frustrum : MonoBehaviour
     private Plane near;
     private Plane far;
 
-    private bool isVisible = false;
-    
     float aspect;
     float fovY;
+
+    private void Update()
+    {
+        if (camera == null) return;
+
+
+    }
 
     void CalculateFrustrum()
     {
@@ -78,16 +84,6 @@ public class Frustrum : MonoBehaviour
         Vector3 fbl = IntersectPlanes(far, bottom, left);
         Vector3 fbr = IntersectPlanes(far, bottom, right);
 
-
-        if (isVisible)
-        {
-            Gizmos.color = Color.green;
-        }
-        else
-        {
-            Gizmos.color = Color.red;
-        }
-
         // Near plane
         Gizmos.DrawLine(ntl, ntr);
         Gizmos.DrawLine(ntr, nbr);
@@ -115,49 +111,34 @@ public class Frustrum : MonoBehaviour
 
         DrawFrustrum();
     }
-    private bool IsPointInsideFrustum(Vector3 worldPoint)
-{
-        if(near.GetSide(worldPoint) && far.GetSide(worldPoint) &&left.GetSide(worldPoint) && right.GetSide(worldPoint) && top.GetSide(worldPoint) && bottom.GetSide(worldPoint))
-        {
-                return true;
-        }
-    return false;
-}
 
-private bool IsAnyVertexVisible()
-{
-    if (targetObject == null || targetObject.sharedMesh == null) return false;
-
-    Vector3[] vertices = targetObject.sharedMesh.vertices;
-
-    for (int i = 0; i < vertices.Length; i++)
+    public Plane GetNear()
     {
-        Vector3 worldVertex = targetObject.transform.TransformPoint(vertices[i]);
-        if (IsPointInsideFrustum(worldVertex))
-        {
-            return true; // Al menos un vértice está adentro
-        }
+        return near;
     }
 
-    return false;
-}
-
-
-
-private void Update()
-{
-    if (camera == null) return;
-
-    CalculateFrustrum();
-    isVisible = IsAnyVertexVisible();
-
-    if (isVisible)
+    public Plane GetFar()
     {
-        Debug.Log($"[DENTRO] {targetObject.name} está en el rango de visión.");
+        return far;
     }
-    else
+
+    public Plane GetTop()
     {
-        Debug.Log($"[FUERA] {targetObject.name} está fuera de visión.");
+        return top;
     }
-}
+
+    public Plane GetBottom()
+    {
+        return bottom;
+    }
+
+    public Plane GetRight()
+    {
+        return right;
+    }
+
+    public Plane GetLeft()
+    {
+        return left;   
+    }
 }
