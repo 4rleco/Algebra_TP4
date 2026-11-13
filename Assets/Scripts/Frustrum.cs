@@ -3,6 +3,9 @@ using UnityEngine.UIElements;
 
 public class Frustrum : MonoBehaviour
 {
+    [SerializeField] private float fov = 60f;
+    [SerializeField] private float aspectRatio = 16f / 9f; 
+    [SerializeField] private MeshFilter targetObject;
     [SerializeField] private Camera camera;
 
     [SerializeField] private float zNear = 0.3f;
@@ -15,16 +18,16 @@ public class Frustrum : MonoBehaviour
     private Plane near;
     private Plane far;
 
+    private bool isVisible = false;
+    
     float aspect;
     float fovY;
 
     void CalculateFrustrum()
     {
-        aspect = camera.aspect;
-        fovY = camera.fieldOfView * Mathf.Deg2Rad;
-
+        float fovY = fov * Mathf.Deg2Rad;
         float halfVSide = zFar * Mathf.Tan(fovY * .5f);
-        float halfHSide = halfVSide * aspect;
+        float halfHSide = halfVSide * aspectRatio;
 
         Vector3 frontMultFar = zFar * camera.transform.forward;
         Vector3 rightMultFar = camera.transform.right * halfHSide;
@@ -34,13 +37,13 @@ public class Frustrum : MonoBehaviour
 
         far = new Plane(-camera.transform.forward, camera.transform.position + frontMultFar);
 
-        right = new Plane(Vector3.Cross(camera.transform.up, frontMultFar - rightMultFar).normalized, camera.transform.position);
+        right = new Plane(Vector3.Cross(frontMultFar + rightMultFar, camera.transform.up).normalized, camera.transform.position);
 
-        left = new Plane(Vector3.Cross(frontMultFar + rightMultFar, camera.transform.up).normalized, camera.transform.position);
+        left = new Plane(Vector3.Cross(camera.transform.up, frontMultFar - rightMultFar).normalized, camera.transform.position);
 
-        top = new Plane(Vector3.Cross(camera.transform.right, frontMultFar - upMultFar).normalized, camera.transform.position);
+        top = new Plane(Vector3.Cross(camera.transform.right, frontMultFar + upMultFar).normalized, camera.transform.position);
 
-        bottom = new Plane(Vector3.Cross(frontMultFar + upMultFar, camera.transform.right).normalized, camera.transform.position);
+        bottom = new Plane(Vector3.Cross(frontMultFar - upMultFar, camera.transform.right).normalized, camera.transform.position);
     }
 
     private Vector3 IntersectPlanes(Plane p1, Plane p2, Plane p3)
@@ -75,7 +78,15 @@ public class Frustrum : MonoBehaviour
         Vector3 fbl = IntersectPlanes(far, bottom, left);
         Vector3 fbr = IntersectPlanes(far, bottom, right);
 
-        Gizmos.color = Color.white;
+
+        if (isVisible)
+        {
+            Gizmos.color = Color.green;
+        }
+        else
+        {
+            Gizmos.color = Color.red;
+        }
 
         // Near plane
         Gizmos.DrawLine(ntl, ntr);
@@ -98,11 +109,55 @@ public class Frustrum : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        aspect = camera.aspect;
-        fovY = camera.fieldOfView * Mathf.Deg2Rad;
+        float fovY = fov * Mathf.Deg2Rad;
 
         CalculateFrustrum();
 
         DrawFrustrum();
     }
+    private bool IsPointInsideFrustum(Vector3 worldPoint)
+{
+        if(near.GetSide(worldPoint) && far.GetSide(worldPoint) &&left.GetSide(worldPoint) && right.GetSide(worldPoint) && top.GetSide(worldPoint) && bottom.GetSide(worldPoint))
+        {
+                return true;
+        }
+    return false;
+}
+
+private bool IsAnyVertexVisible()
+{
+    if (targetObject == null || targetObject.sharedMesh == null) return false;
+
+    Vector3[] vertices = targetObject.sharedMesh.vertices;
+
+    for (int i = 0; i < vertices.Length; i++)
+    {
+        Vector3 worldVertex = targetObject.transform.TransformPoint(vertices[i]);
+        if (IsPointInsideFrustum(worldVertex))
+        {
+            return true; // Al menos un vértice está adentro
+        }
+    }
+
+    return false;
+}
+
+
+
+private void Update()
+{
+    if (camera == null) return;
+
+    CalculateFrustrum();
+    isVisible = IsAnyVertexVisible();
+
+    if (isVisible)
+    {
+        Debug.Log($"[DENTRO] {targetObject.name} está en el rango de visión.");
+    }
+    else
+    {
+        Debug.Log($"[FUERA] {targetObject.name} está fuera de visión.");
+    }
+}
 }
